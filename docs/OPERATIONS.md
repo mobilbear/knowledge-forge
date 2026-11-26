@@ -35,6 +35,8 @@ Optional format support depends on the machine. The Python `capture` extra inclu
 3. Save a public article through each agent. Confirm the receipt, exact source path, checked guide, resource review where eligible, and current edition link. Re-submit one of the links to confirm that it opens the existing source.
 4. Open the synced vault on the reading device. Check the briefing, a Canvas branch, and an evidence jump to an original PDF or transcript.
 
+On Liang's machine the agent command is `/home/ohayo/.local/bin/kf-liangwiki`. It delegates to `kf-live` and the committed checkout. Both runtimes can link the skill directory to `skills/knowledge-forge` in that checkout. OpenClaw accepts that link under its managed skills directory. Hermes Munger accepts it under its profile's skills directory. Preserve prior copies outside the discovery directories so their shared name cannot override the link. Verify the selected path with `openclaw skills info --agent main --json knowledge-forge` and check that `hermes -p munger skills list --enabled-only` includes `knowledge-forge`.
+
 Keep source text, transcripts, and linked pages as evidence. The agent writes its interpretation in a local draft and uses the CLI to file it. An incomplete receipt should describe the missing input. Use the editable personal edition for the narrative. The engine regenerates Current Brief from saved state after capture.
 
 ## Sync and updates

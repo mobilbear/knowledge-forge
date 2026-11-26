@@ -39,7 +39,9 @@ editorial steps needed to finish a saved source.
 - "整理分类 / clean up categories" → `taxonomy garden --dry-run`; present the
   proposals; apply ONLY the specific proposal the user approves via
   `taxonomy apply <id> --approved-by liang`.
-- "系统有问题 / check the system" → `doctor`; "修一下" → `doctor --fix-safe`.
+- "系统有问题 / check the system" or "修一下 / fix it" → `doctor` first.
+  Inspect the failing checks. Any repair that would clear a lock or discard
+  files requires explicit approval for those exact targets.
 - Backup/restore/migrate commands are deployment-session tools; in daily chat
   suggest them but confirm before running `backup create`.
 

@@ -32,9 +32,12 @@ fallback, so a local video without a transcript is preserved and truthfully
 queued for manual transcription. If no local path was supplied, ask the user to
 send the image/video as an attachment again rather than inventing a path.
 
-Use the configured Knowledge Forge launcher for LiangWiki. In this skill,
-`kf` means the launcher selected by the operator for this vault. Run
-`kf --json status` and verify the configured vault if in doubt. Use the archive receipt to
+On Liang's machine, substitute the exact executable
+`/home/ohayo/.local/bin/kf-liangwiki` for `kf` in every command below and in the
+reference files. Use that path even when `kf` is on `PATH` or an older session
+mentions it. On other installations, substitute the launcher configured by
+the operator for the intended vault. Run the launcher's `--json status`
+command before writing if the target is unclear. Use the archive receipt to
 decide which steps apply. The application writes the vault and verifies
 evidence links.
 
@@ -76,7 +79,7 @@ evidence links.
 | asks to study a saved source in depth | write a guided lesson and run `kf --json library lesson <source> <draft.md>` |
 | asks for podcast/audio | `kf --json podcast build --daily` |
 | asks to reorganise categories | `kf --json taxonomy garden --dry-run` (report only) |
-| asks to check/repair the system | `kf --json doctor` (add `--fix-safe` if asked to repair) |
+| asks to check/repair the system | `kf --json doctor`, then inspect the failing checks |
 
 Every command returns a JSON envelope: `status`, `result`, `warnings`,
 `errors`, `needs_user_action`, `user_message_zh`. Speak `user_message_zh` to
