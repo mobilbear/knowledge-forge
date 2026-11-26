@@ -1,8 +1,10 @@
 """Capture transactions that retain receipts, backups and staged files."""
 from __future__ import annotations
 
+import errno
 import fcntl
 import os
+import shutil
 from contextlib import contextmanager
 
 from .. import ids
@@ -22,6 +24,10 @@ def library_lock(path, *, blocking=True):
 
 
 class LibraryTransaction(Transaction):
+    def _write_journal(self, phase):
+        self.meta["vault_path"] = str(self.vault.resolve())
+        super()._write_journal(phase)
+
     def stage_artifact(self, path, data):
         self._check_rel(path)
         self.stage_dir.mkdir(parents=True, exist_ok=True)
@@ -41,7 +47,6 @@ class LibraryTransaction(Transaction):
         return changes
 
     def rollback(self):
-        import shutil
         retained = self.backup_dir.parent / "rollback"
         retained.mkdir(exist_ok=True)
         for operation in reversed(self.ops):
@@ -50,8 +55,20 @@ class LibraryTransaction(Transaction):
             backup = self.backup_dir / key
             if backup.exists():
                 shutil.copy2(backup, target)
-            elif target.exists() and not (retained / key).exists():
-                target.rename(retained / key)
+            elif target.exists():
+                destination = retained / key
+                if destination.exists():
+                    raise RuntimeError(f"rollback destination already exists: {destination}")
+                try:
+                    target.rename(destination)
+                except OSError as error:
+                    if error.errno != errno.EXDEV:
+                        raise
+                    destination = target.parent / ".kf-recovery" / self.txn_id / target.name
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    if destination.exists():
+                        raise RuntimeError(f"rollback destination already exists: {destination}")
+                    target.rename(destination)
         self._write_journal("rolled_back")
 
     def _cleanup_stage(self):
@@ -65,19 +82,30 @@ def new_transaction(cfg, meta):
 
 
 def recover(cfg, refresh):
+    vault_path = str(cfg.vault.resolve())
+    recovery = []
     for entry in find_incomplete(cfg.state_home):
-        if not entry.get("meta", {}).get("action", "").startswith("library."):
+        meta = entry.get("meta", {})
+        if not meta.get("action", "").startswith("library."):
             raise RuntimeError("a legacy transaction needs review before writing")
+        if not meta.get("vault_path"):
+            raise RuntimeError("an unbound library journal needs review before writing")
+        if meta["vault_path"] != vault_path:
+            raise RuntimeError("an incomplete library journal belongs to a different vault")
+        if entry["phase"] not in {"committing", "committed", "pending"}:
+            raise RuntimeError("unknown library journal phase")
         txn = LibraryTransaction(entry["txn_id"], cfg.state_home, cfg.vault,
                                  ops=[PlannedWrite(**op) for op in entry["ops"]],
-                                 meta=entry["meta"])
-        if entry["phase"] == "committing":
+                                 meta=meta)
+        for operation in txn.ops:
+            txn._check_rel(operation.vault_rel)
+        recovery.append((entry["phase"], txn))
+    for phase, txn in recovery:
+        if phase == "committing":
             txn.rollback()
-        elif entry["phase"] == "committed":
+        elif phase == "committed":
             refresh()
             txn._write_journal("done")
-        elif entry["phase"] == "pending":
-            txn._write_journal("rolled_back")
         else:
-            raise RuntimeError("unknown capture journal phase")
+            txn._write_journal("rolled_back")
         txn._cleanup_stage()

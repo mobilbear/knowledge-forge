@@ -20,5 +20,6 @@ Rules for you:
 - Never summarize `result.diff` unless asked; it exists for audit.
 
 Useful `result` fields after capture: `note` (vault path), `source_id`,
-`capture_status`, `content_completeness`, `primary_category_id`,
-`pending_note`.
+`capture_status`, `content_completeness`, and `primary_category_id`. Open
+`[[Library.base#Needs Attention]]` for unclassified sources and sources with
+interpretation still pending.

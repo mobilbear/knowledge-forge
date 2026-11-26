@@ -44,6 +44,9 @@ def test_capture_and_checked_guide_refresh_the_live_brief_and_accept_an_edition(
     draft_issue.write_text(f'# Finding evidence again\n\nA new story. [[{target}#Made up|Evidence]]\n')
     with pytest.raises(ValueError, match='evidence'):
         pipeline.publish_edition(cfg, relative, draft_issue)
+    draft_issue.write_text(f'# Finding evidence again\n\n```text\n[[{target}#Source evidence 1]]\n```\n')
+    with pytest.raises(ValueError, match='evidence'):
+        pipeline.publish_edition(cfg, relative, draft_issue)
     draft_issue.write_text(f'# Finding evidence again\n\nA new story. [[{target}#Source evidence 1|Evidence]]\n')
     result = pipeline.publish_edition(cfg, relative, draft_issue)
     edition = cfg.vault / result['edition']
@@ -59,6 +62,8 @@ def test_live_brief_limits_coverage_and_keeps_newest_version():
                     captured_at=f'2026-11-26T12:00:{i:02d}', canonical_url=f'https://example.org/{i}')
         notes.append(Note(vault / f'10_sources/{i}.md', meta, '## Source text\n\nAn archived paragraph.'))
     notes[0].meta.update(title='Re-captured article', captured_at='2026-08-01', last_captured_at='2026-11-26T14:00:00')
+    notes[0].body = ('## Source text\n\nOld finding.\n\n## Updated capture (2026-11-26) · Version 2'
+                     '\n\n## Source text\n\nNew finding.')
     notes[1].meta.update(captured_at='2026-11-10')
     notes[2].meta.update(canonical_url='https://example.org/0')
     notes[11].meta.update(capture_status='usable_partial')
@@ -69,3 +74,5 @@ def test_live_brief_limits_coverage_and_keeps_newest_version():
     assert 'Re-captured article' in rendered and 'Article 02' not in rendered
     assert 'Article 01' not in rendered and 'Blocked article' not in rendered
     assert 'Partial archive' in rendered and 'Source excerpt' in rendered
+    assert 'New finding.' in rendered and 'Old finding.' not in rendered
+    assert '[[10_sources/0#Updated capture (2026-11-26) · Version 2|Captured text]]' in rendered

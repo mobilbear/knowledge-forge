@@ -15,12 +15,12 @@ def _captured(note):
     return str(note.meta.get("last_captured_at") or note.meta.get("captured_at") or "")
 
 
-def _excerpt(note):
-    match = re.search(r"(?m)^- (.+?) · \[\[#(Evidence \d+)\|[^\]]+\]\]$", note.body)
+def _excerpt(body):
+    match = re.search(r"(?m)^- (.+?) · \[\[#(Evidence \d+)\|[^\]]+\]\]$", body)
     if match:
         return match[1], match[2]
     for heading in ("Source text", "OCR (from images)", "Saved source and original notes"):
-        section = desk._section(note.body, re.escape(heading))
+        section = desk._section(body, re.escape(heading))
         if section:
             return literal_source(" ".join(section.split())[:240]), heading
     return "", ""
@@ -56,13 +56,19 @@ def build(vault, index, today=None):
             body += [f"### {brain.wiki(target, brain.title(note))}", ""]
             if note.meta["capture_status"] == "usable_partial":
                 body += ["**Coverage** Partial archive.", ""]
+            updated = list(re.finditer(r"(?m)^## (Updated capture \(\d{4}-\d{2}-\d{2}\)[^\n]*)$", note.body))
+            latest = updated[-1] if updated else None
+            excerpt, anchor = _excerpt(note.body[latest.end():]) if latest else ("", "")
+            if excerpt:
+                body += [f"**Updated source excerpt** {excerpt} · [[{target}#{latest[1]}|Captured text]]", ""]
+                continue
             fields = desk.briefing_fields(note.meta, note.body)
             if fields:
                 body += [f"**Takeaway** {fields['reading_takeaway']}", "",
                          f"**Why it matters** {fields['reading_value']}", "",
                          f"[[{target}#{fields['reading_evidence']}|Evidence]]", ""]
             else:
-                excerpt, anchor = _excerpt(note)
+                excerpt, anchor = _excerpt(note.body)
                 if excerpt:
                     body += [f"**Source excerpt** {excerpt} · [[{target}#{anchor}|Captured text]]", ""]
     return render({"id": "brf_live_current", "note_type": "briefing", "title": "LiangWiki · Live briefing",

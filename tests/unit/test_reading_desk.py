@@ -160,6 +160,9 @@ def test_attach_lesson_requires_a_real_evidence_heading():
     draft.write_text(lesson)
     with pytest.raises(ValueError, match='evidence'):
         pipeline.attach_lesson(cfg, 'src_paper', draft)
+    draft.write_text('# How the method works\n\n[[10_sources/paper#Page 2')
+    with pytest.raises(ValueError, match='evidence'):
+        pipeline.attach_lesson(cfg, 'src_paper', draft)
     draft.write_text(lesson.replace('#Page 3', '#Page 2'))
     result = pipeline.attach_lesson(cfg, 'src_paper', draft)
     meta, body = frontmatter.read_note(source)

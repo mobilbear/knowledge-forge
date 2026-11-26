@@ -141,7 +141,7 @@ def test_multiday_simulation_uat(cfg):
     # gardener + doctor stay green; vault invariants hold
     g = run_cli("taxonomy garden --dry-run")
     assert g["status"] == "completed"
-    d = run_cli("doctor --fix-safe")
+    d = run_cli("doctor")
     bad = [c for c in d["result"]["checks"] if not c["ok"]]
     allowed_bad = {"backup_recent", "env_file", "env_file_permissions",
                    "skill_installed_verified"}

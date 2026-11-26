@@ -4,7 +4,7 @@ is schema-validated before any effect.
 
 capture_url / capture_images / capture_file →
   received → capturing → normalized → quality gate
-  → usable  : enrich → classify → stage source note (+ pending queue if unclassified)
+  → usable  : enrich → classify → stage source note (flag unclassified notes for review)
   → other   : stage quarantine note in 80_queues/
   → stage map/HOME regeneration → validate → lock → commit → index refresh
   → verified envelope result
@@ -136,10 +136,13 @@ def _existing_capture(vi, record):
     ), default=None)
 
 
-def _stage_maps(cfg, registry):
+def _stage_maps(cfg, registry, scope=None):
     vi = VaultIndex.build(cfg.vault)
+    files = (generators.rebuild_all(cfg, vi, registry) if not scope else
+             {**generators.build_domain_map(cfg, vi, registry, scope),
+              **generators.build_topic_map(cfg, vi, registry, scope)})
     txn = library_writes.new_transaction(cfg, {"action": "library.rebuild"})
-    for path, content in generators.rebuild_all(cfg, vi, registry).items():
+    for path, content in files.items():
         target = cfg.vault / path
         if not target.exists() or target.read_text(encoding="utf-8") != content:
             txn.stage_write(path, content)
@@ -147,13 +150,14 @@ def _stage_maps(cfg, registry):
         txn.commit(after_commit=lambda: search.refresh_after_commit(cfg))
     else:
         search.refresh_after_commit(cfg)
+    return sorted(files)
 
 
-def rebuild_library(cfg):
+def rebuild_library(cfg, scope=None):
     writer.verify_vault(cfg)
     with library_writes.library_lock(cfg.state_home / "library.lock"):
         library_writes.recover(cfg, lambda: search.refresh_after_commit(cfg))
-        _stage_maps(cfg, _registry(cfg))
+        return _stage_maps(cfg, _registry(cfg), scope=scope)
 
 
 def initialize_library(cfg):
@@ -292,6 +296,20 @@ def _source_with_companion(source, meta, field, label):
     return f"{link}\n\n{body}"
 
 
+_WIKILINK = re.compile(r"(?<!\\)\[\[([^#|\[\]\n]*)(?:#([^|\[\]\n]+))?(?:\|[^\[\]\n]*)?\]\]")
+_MARKDOWN_LITERAL = re.compile(
+    r"<!--.*?(?:-->|\Z)|^ {0,3}(`{3,}|~{3,})[^\n]*\n.*?(?:^ {0,3}\1[ \t]*$|\Z)"
+    r"|(`+)[^\n]*?\2|^[ ]{4}[^\n]*$", re.MULTILINE | re.DOTALL)
+
+
+def _visible_markdown(body):
+    return _MARKDOWN_LITERAL.sub("", body)
+
+
+def _headings(body):
+    return set(re.findall(r"(?m)^#{1,6} ([^\n]+)$", _visible_markdown(body)))
+
+
 def publish_edition(cfg, source_ref, draft_path):
     """Publish the day's edition with checked evidence links to the new source."""
     writer.verify_vault(cfg)
@@ -299,7 +317,8 @@ def publish_edition(cfg, source_ref, draft_path):
     if draft.suffix.lower() != ".md" or draft.stat().st_size > 128 * 1024:
         raise ValueError("supply a Markdown edition draft below 128 KiB")
     draft_meta, body = fm.read_note(draft)
-    heading = re.search(r"(?m)^# ([^\n]+)$", body)
+    visible = _visible_markdown(body)
+    heading = re.search(r"(?m)^# ([^\n]+)$", visible)
     if not heading:
         raise ValueError("the edition should have a Markdown title")
     with library_writes.library_lock(cfg.state_home / "library.lock"):
@@ -310,13 +329,15 @@ def publish_edition(cfg, source_ref, draft_path):
             raise ValueError("the triggering source needs a usable archive")
         trigger = rel(cfg.vault, source.path)
         source_evidence = False
-        for target, anchor in re.findall(r"\[\[([^\]|#]+)(?:#([^\]|]+))?", body):
+        for target, anchor in _WIKILINK.findall(visible):
+            if not target:
+                continue
             path, _ = vi.resolve_link(target)
             if path is None:
                 raise ValueError(f"unresolved edition link: {target}")
             linked = vi.by_rel.get(path)
             if anchor and linked:
-                if not re.search(r"(?m)^#{1,6} " + re.escape(anchor) + "$", linked.body):
+                if anchor not in _headings(linked.body):
                     raise ValueError(f"unresolved edition evidence heading: {target}#{anchor}")
                 source_evidence |= path == trigger
         if not source_evidence:
@@ -350,7 +371,8 @@ def attach_lesson(cfg, source_ref, draft_path):
     if draft.suffix.lower() != ".md" or draft.stat().st_size > 256 * 1024:
         raise ValueError("supply a Markdown lesson draft below 256 KiB")
     draft_meta, body = fm.read_note(draft)
-    heading = re.search(r"(?m)^# ([^\n]+)$", body)
+    visible = _visible_markdown(body)
+    heading = re.search(r"(?m)^# ([^\n]+)$", visible)
     if not heading:
         raise ValueError("the lesson should have a Markdown title")
     minutes = draft_meta.get("read_minutes", 12)
@@ -363,12 +385,14 @@ def attach_lesson(cfg, source_ref, draft_path):
         if source.meta.get("capture_status") != "complete":
             raise ValueError("a finished guided lesson requires a complete primary archive")
         source_path = rel(cfg.vault, source.path)
-        cited_headings = re.findall(r"\[\[" + re.escape(source_path) + r"(?:\.md)?#([^\]|]+)", body)
-        headings = set(re.findall(r"(?m)^#{1,6} ([^\n]+)$", reading.original_body(source.body)))
+        links = _WIKILINK.findall(visible)
+        cited_headings = [anchor for target, anchor in links
+                          if target.removesuffix(".md") == source_path and anchor]
+        headings = _headings(reading.original_body(source.body))
         if not cited_headings or any(anchor not in headings for anchor in cited_headings):
             raise ValueError("the lesson must cite exact evidence headings in the primary archive")
-        for target in re.findall(r"\[\[([^\]|#]+)", body):
-            if not vi.resolve_link(target)[0]:
+        for target, _ in links:
+            if target and not vi.resolve_link(target)[0]:
                 raise ValueError(f"unresolved lesson link: {target}")
         key = hashlib.sha256((source.note_id or source_path).encode()).hexdigest()[:12]
         target = source.meta.get("reading_lesson") or f"50_skills/Deep Reading/{ids.slugify(heading[1], 48)}--{key}"
@@ -604,6 +628,19 @@ def _archive_capture(cfg, run, log, raw, source_url, note, profile, infer_platfo
                     "meta": meta, "body": body}
         if plan["action"] == "noop_duplicate":
             status = existing.meta.get("capture_status", "usable_partial")
+            repair = None
+            for path, data in artifacts.items():
+                if not (cfg.vault / path).is_file():
+                    if repair is None:
+                        repair = library_writes.new_transaction(cfg, {"action": "library.repair", "run_id": run})
+                    repair.stage_artifact(path, data)
+            if repair is not None:
+                repair.commit()
+            _stage_maps(cfg, registry)
+            if not search.contains_note(cfg, record["id"]):
+                raise RuntimeError("saved capture could not be verified in the search index")
+            if status == "complete":
+                jobs.reconcile_archived(cfg, record.get("source_url"), record["id"], plan["rel"] + ".md")
             return _capture_result(run, "noop",
                                    {"action": plan["action"], "existing_note": plan["rel"] + ".md",
                                     "source_id": record["id"], "capture_status": status,

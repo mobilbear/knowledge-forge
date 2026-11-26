@@ -72,6 +72,13 @@ def test_document_can_discuss_a_login_screen_without_being_rejected():
     assert grade(raw, "https://arxiv.org/pdf/2501.00002")["capture_status"] == "complete"
 
 
+def test_verified_local_document_can_supply_the_content_of_a_rednote_share():
+    raw = dict(platform="xiaohongshu", title="Saved lecture outline", capture_method="manual",
+               content_kind="document", body_verified=True,
+               text="### Page 1\n\nThe lecture explains how to classify source material.")
+    assert grade(raw, "https://www.xiaohongshu.com/explore/1")["capture_status"] == "complete"
+
+
 def test_interpretation_checks_quote_and_links_pdf_page():
     import json
     from knowledge_forge.enrichment import harness, tasks

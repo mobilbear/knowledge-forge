@@ -16,7 +16,7 @@ from typing import Iterator, Optional
 
 from . import frontmatter as fm
 
-EXCLUDE_DIRS = {".obsidian", ".trash", ".git", "node_modules", "_attachments", "70_media"}
+EXCLUDE_DIRS = {".obsidian", ".trash", ".git", ".kf-recovery", "node_modules", "_attachments", "70_media"}
 NOTE_DIRS = ("10_sources", "20_concepts", "30_entities", "40_maps",
              "50_skills", "60_briefings", "80_queues", "90_meta")
 

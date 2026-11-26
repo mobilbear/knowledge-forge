@@ -6,6 +6,8 @@ Set `KF_VAULT` to the root directory opened by Obsidian. Set `KF_STATE_HOME`, `K
 
 Use `bin/kf --json library init` to stamp a selected vault, persist the starting taxonomy if it is absent, and generate HOME, Canvas and Bases. For an existing vault, take and verify a backup before first initialization. Re-run `bin/kf --json library rebuild` after manual taxonomy or navigation edits. Use `bin/kf --json status` to check index freshness and incomplete transactions.
 
+Each vault needs its own state directory. The library writer records the vault's resolved path in its journals. If an incomplete journal points to another path or predates vault binding, review the journal and original vault before retrying. Recovery retains backups and staged files. When the vault and state directories are on different filesystems, restored copies of interrupted new files may be kept under `.kf-recovery` beside the affected files. The library skips these folders in discovery and search.
+
 ## Capture and review
 
 | Job | Command using the configured launcher |
@@ -37,6 +39,6 @@ Keep source text, transcripts, and linked pages as evidence. The agent writes it
 
 ## Sync and updates
 
-Sync Markdown, Canvas, Bases and attachments through your chosen file sync, such as Syncthing or VaultSync. Keep the writer's journals, queues, logs, locks and index on the writer machine. A search index can be rebuilt. Pending jobs and transaction records need their own backup if they must survive a move.
+Sync Markdown, Canvas, Bases and attachments through your chosen file sync, such as Syncthing or VaultSync. Keep the writer's journals, queues, logs, locks and index on the writer machine. Exclude `.kf-recovery` folders from sync. A search index can be rebuilt. Pending jobs and transaction records need their own backup if they must survive a move.
 
-Start code changes from the tracked Git branch. Check the current worktree, pull with `git pull --ff-only` when a remote is configured, use the demo or a separate validation vault, and commit the verified change. Review changed skill files before deploying them to agents.
+Start code changes from the tracked Git branch. On Liang's machine use `/home/ohayo/Projects/knowledge-forge`. Check the current worktree, pull with `git pull --ff-only` when the upstream is available, and run `bin/check` from the checkout. This suite uses synthetic captures and sandboxed runtime paths under `.runtime` and retains its fixtures for review. Live provider checks, migration, installation and legacy cleanup use separate procedures. Review the committed skill before deploying it to agents.

@@ -250,7 +250,7 @@ def plan_source_filing(cfg: KFConfig, vi: VaultIndex, record: dict, **enrich) ->
     versions.append({"hash": existing.meta.get("content_hash"), "superseded_at": now_iso()})
     meta["version_history"] = versions
     body = (existing.body.rstrip()
-            + f"\n\n## Updated capture ({record['captured_at'][:10]})\n\n"
+            + f"\n\n## Updated capture ({record['captured_at'][:10]}) · Version {len(versions) + 1}\n\n"
             + current_body + "\n")
     added_files = [path for path in current["attachments"] if path not in (existing.meta.get("attachments") or [])]
     if (added_files and existing.meta.get("content_hash") == record["content_hash"]

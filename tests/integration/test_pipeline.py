@@ -9,6 +9,8 @@ from knowledge_forge.config import load_config
 from knowledge_forge.vault.writer import stamp_vault
 from knowledge_forge.index import search
 from knowledge_forge import pipeline
+from knowledge_forge.capture import jobs
+from knowledge_forge.frontmatter import read_note
 
 
 GOOD_TEXT = ("Deterministic scaffolding lets weak language models operate "
@@ -48,7 +50,8 @@ def test_usable_capture_commits_and_indexes(cfg):
     hits = search.query(cfg, "scaffolding")
     assert hits and hits[0]["note_id"] == res["result"]["source_id"]
     # a Chinese-status message exists
-    assert "已收录" in res["user_message_zh"]
+    assert res["result"]["capture_status"] == "complete"
+    assert "完整存档" in res["user_message_zh"]
 
 
 def test_repeat_url_idempotent(cfg):
@@ -59,6 +62,18 @@ def test_repeat_url_idempotent(cfg):
     assert r2["result"]["action"] == "noop_duplicate"
     files = list((cfg.vault / "10_sources").rglob("*.md"))
     assert len(files) == 1
+
+
+def test_identical_recapture_restores_missing_attachment_and_receipt(cfg):
+    first = _capture(cfg, artifacts=[("original.pdf", b"example original")])
+    path = cfg.vault / first["result"]["attachments"][0]
+    retained = path.rename(cfg.vault.parent / "retained-original.pdf")
+    receipt = jobs.submit(cfg, "https://example.com/a")["receipt"]
+    second = _capture(cfg, artifacts=[("original.pdf", b"example original")])
+    assert second["status"] == "noop"
+    assert path.read_bytes() == retained.read_bytes()
+    assert jobs.lookup(cfg, receipt)["status"] == "archived"
+    assert search.contains_note(cfg, first["result"]["source_id"])
 
 
 def test_changed_content_appends_version_never_overwrites(cfg):
@@ -82,7 +97,8 @@ def test_metadata_only_is_quarantined(cfg):
     assert res["result"]["note"].startswith("80_queues/")
     assert not list((cfg.vault / "10_sources").rglob("*login*"))
     # truthful Chinese message
-    assert "未进入正式知识库" in res["user_message_zh"]
+    assert res["result"]["capture_status"] == "metadata_only"
+    assert "仅取得元数据" in res["user_message_zh"]
     # the quarantined note itself is excluded from knowledge search
     # (HOME may mention it in "needs attention" — that's navigation, not knowledge)
     knowledge_hits = search.query(cfg, "Login-walled")
@@ -131,23 +147,28 @@ def test_subhomes_exist_for_active_l1_l2(cfg):
 def test_unclassified_lands_in_pending_queue(cfg):
     res = _capture(cfg)
     assert res["needs_user_action"] is True
-    assert res["result"]["pending_note"] is not None
-    assert (cfg.vault / res["result"]["pending_note"]).exists()
+    meta, _ = read_note(cfg.vault / res["result"]["note"])
+    assert meta["classification_status"] == "review" and meta["primary_category_id"] is None
+    assert "Needs Attention" in (cfg.vault / "Library.base").read_text()
 
 
 def test_offline_mode_still_captures(cfg):
     # offline profile: no model at all — capture must still commit evidence
     res = _capture(cfg)
     assert res["status"] == "completed"
-    assert any("extractive" in w for w in res["warnings"])
+    meta, body = read_note(cfg.vault / res["result"]["note"])
+    assert meta["analysis_status"] == "needs_review"
+    assert "## Key source excerpts" in body
 
 
 def test_run_capture_recovers_stale_transaction_first(cfg):
     from knowledge_forge.vault import transactions as txn
-    t = txn.new_transaction(cfg.state_home, cfg.vault)
+    from knowledge_forge.vault import library_writes
+    t = library_writes.new_transaction(cfg, {"action": "library.capture"})
     t.stage_write("10_sources/ghost.md", "ghost")
     t._write_journal("pending")   # simulated crash before commit
     res = _capture(cfg)
     assert res["status"] == "completed"
     assert not txn.find_incomplete(cfg.state_home)
-    assert not (cfg.vault / "10_sources/ghost.md").exists()  # discarded, not applied
+    assert not (cfg.vault / "10_sources/ghost.md").exists()
+    assert (t.journal_path.parent / "staged").is_dir()

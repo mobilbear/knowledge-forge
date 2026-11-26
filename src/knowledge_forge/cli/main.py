@@ -19,7 +19,6 @@ from ..discovery import VaultIndex
 from ..taxonomy.registry import TaxonomyRegistry, GovernanceError
 from ..taxonomy import gardener
 from ..index import search
-from ..maps import generators
 from ..briefing import builder as briefing
 from ..enrichment import harness
 from ..operations import backup as backup_ops
@@ -27,7 +26,6 @@ from ..operations import doctor as doctor_ops
 from ..operations import migrate as migrate_ops
 from ..operations import skill as skill_ops
 from ..vault import transactions as txn
-from ..vault.writer import verify_vault
 from .. import pipeline
 from ..capture import jobs
 
@@ -67,7 +65,7 @@ def cmd_capture(a, cfg):
         raise ValueError("transcript previews support URL, video, and queued-link capture")
     if a.follow_references and a.what not in ("url", "video", "drain"):
         raise ValueError("reference review supports URL, video, and queued-link capture")
-    if a.what == "url":
+    if a.what in ("url", "video"):
         res = pipeline.run_capture(cfg, a.target, kind="url", note=a.note, profile=a.profile,
                                    public_fallback=a.public_fallback, transcribe_preview=a.transcribe_preview,
                                    follow_references=a.follow_references)
@@ -78,9 +76,6 @@ def cmd_capture(a, cfg):
     elif a.what == "file":
         res = pipeline.run_capture(cfg, a.target, kind="file", profile=a.profile,
                                    note=a.note, source_url=a.source_url)
-    elif a.what == "video":
-        res = pipeline.run_capture(cfg, a.target, kind="url", profile=a.profile,
-                                   transcribe_preview=a.transcribe_preview, follow_references=a.follow_references)
     elif a.what == "submit":
         receipt = jobs.submit(cfg, a.target, a.note)
         return envelope("capture.submit", "queued", receipt,
@@ -204,18 +199,8 @@ def cmd_taxonomy(a, cfg):
 
 
 def cmd_maps(a, cfg):
-    verify_vault(cfg)
-    reg = TaxonomyRegistry.load(cfg.taxonomy_registry_path)
-    vi = VaultIndex.build(cfg.vault)
-    files = (generators.rebuild_all(cfg, vi, reg) if not a.scope else
-             {**generators.build_domain_map(cfg, vi, reg, a.scope),
-              **generators.build_topic_map(cfg, vi, reg, a.scope)})
-    t = txn.new_transaction(cfg.state_home, cfg.vault, meta={"action": "maps.rebuild"})
-    for relpath, content in files.items():
-        t.stage_write(relpath, content)
-    with txn.VaultLock(cfg.lock_path):
-        t.commit(after_commit=lambda: search.refresh_after_commit(cfg))
-    return envelope("maps.rebuild", "completed", {"files": sorted(files)},
+    files = pipeline.rebuild_library(cfg, scope=a.scope)
+    return envelope("maps.rebuild", "completed", {"files": files},
                     zh=f"已重建 {len(files)} 个导航页（HOME/子主页/地图），索引已刷新。")
 
 

@@ -1,0 +1,66 @@
+#!/bin/sh
+set -eu
+checkout="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+cd "$checkout"
+mkdir -p .runtime
+export KF_TEST_CASES
+KF_TEST_CASES="$(mktemp -d "$checkout/.runtime/check-XXXXXXXX")"
+export PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+export PYTHONPATH="$checkout/src${PYTHONPATH:+:$PYTHONPATH}"
+exec "${KF_PYTHON:-python3}" -B - "$@" <<'PY'
+import os
+import sys
+from pathlib import Path
+from tempfile import mkdtemp
+
+import pytest
+
+root = Path(os.environ["KF_TEST_CASES"])
+for key in list(os.environ):
+    if key.startswith(("KF_", "OPENCLAW_")) and key != "KF_TEST_CASES":
+        os.environ.pop(key)
+for key, name in {
+    "KF_VAULT": "vault", "KF_STATE_HOME": "state", "KF_CONFIG_HOME": "config",
+    "KF_ENV_FILE": "absent.env", "KF_CACHE_HOME": "cache", "KF_BACKUP_ROOT": "backups",
+    "OPENCLAW_HOME": "agent", "OPENCLAW_WORKSPACE": "workspace", "OPENCLAW_SKILL": "skill",
+}.items():
+    os.environ[key] = str(root / name)
+
+
+class RetainedCases:
+    @pytest.fixture
+    def tmp_path(self):
+        return Path(mkdtemp(prefix="case-", dir=root))
+
+
+cases = [
+    "tests/unit/test_core.py",
+    "tests/unit/test_liangwiki_pilot.py",
+    "tests/unit/test_live_brief.py",
+    "tests/unit/test_reading_desk.py",
+    "tests/unit/test_regression_fixes.py",
+    "tests/unit/test_safety.py::test_path_escape_rejected",
+    "tests/unit/test_safety.py::test_recursive_discovery_and_basename_resolution",
+    "tests/unit/test_safety.py::test_malformed_note_surfaced_not_dropped",
+    "tests/unit/test_safety.py::test_duplicate_ids_detected",
+    "tests/unit/test_safety.py::test_l1_creation_blocked_without_approval",
+    "tests/unit/test_safety.py::test_l3_threshold_enforced",
+    "tests/unit/test_safety.py::test_near_duplicate_blocked",
+    "tests/unit/test_safety.py::test_merge_preserves_aliases_and_redirects",
+    "tests/unit/test_safety.py::test_wrong_parent_level_rejected",
+    "tests/unit/test_safety.py::test_registry_roundtrip_schema",
+    "tests/unit/test_source_references.py",
+    "tests/unit/test_writer_validation.py",
+    "tests/golden_corpus/test_golden.py",
+    "tests/integration/test_pipeline.py",
+    "tests/model_regression/test_contracts.py",
+    "tests/end_to_end/test_e2e.py::test_cli_failure_is_a_valid_envelope",
+    "tests/end_to_end/test_e2e.py::test_capture_then_status_then_search",
+    "tests/end_to_end/test_e2e.py::test_briefing_and_podcast_use_usable_only",
+    "tests/end_to_end/test_e2e.py::test_taxonomy_governance_via_cli",
+    "tests/end_to_end/test_e2e.py::test_multiday_simulation_uat",
+]
+print(f"Retained verification cases: {root}", flush=True)
+raise SystemExit(pytest.main(["-q", "-p", "no:cacheprovider", "-p", "no:tmpdir", *cases, *sys.argv[1:]],
+                             plugins=[RetainedCases()]))
+PY

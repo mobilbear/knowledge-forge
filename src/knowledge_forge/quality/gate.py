@@ -98,7 +98,7 @@ def assess(record: dict) -> dict:
     image_content_missing = no_media and (
         (record.get("platform") in IMAGE_FIRST_PLATFORMS
          and method not in ("transcript", "whisper")
-         and not (kind == "article" and verified))
+         and not (kind in ("article", "document") and verified))
         or ("blob:" in text and prose_n < MIN_COMPLETE_CHARS))
 
     if kind == "video metadata":

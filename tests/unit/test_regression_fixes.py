@@ -43,8 +43,8 @@ def test_arxiv_is_a_platform():
     assert urlnorm.platform_of("https://www.arxiv.org/html/2606.12683") == "arxiv"
 
 
-def test_arxiv_cascade_prefers_cap_arxiv():
-    assert adapters.CASCADES["arxiv"][0] is adapters.cap_arxiv
+def test_arxiv_cascade_prefers_full_pdf_before_abstract():
+    assert adapters.CASCADES["arxiv"][:2] == [adapters.cap_paper_pdf, adapters.cap_arxiv]
 
 
 _ARXIV_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -133,7 +133,7 @@ def test_new_version_writes_md_path(tmp_path):
     vi = SimpleNamespace(by_id={"src_x": existing}, notes=[existing])
     record = {"id": "src_x", "capture_status": "complete", "canonical_url": "https://x/y",
               "content_hash": "sha256:NEW", "captured_at": "2026-07-15T00:00:00+08:00",
-              "text": "updated text", "platform": "web", "title": "t"}
+              "text": "updated text", "platform": "web", "title": "t", "capture_method": "direct"}
     plan = writer.plan_source_filing(SimpleNamespace(vault=tmp_path), vi, record)
     assert plan["action"] == "new_version"
     assert plan["rel"].endswith(".md")               # regression: was extensionless
@@ -141,12 +141,13 @@ def test_new_version_writes_md_path(tmp_path):
 
 def test_duplicate_hash_is_noop(tmp_path):
     existing = SimpleNamespace(
-        meta={"id": "src_x", "content_hash": "sha256:SAME", "canonical_url": "https://x/y"},
+        meta={"id": "src_x", "content_hash": "sha256:SAME", "canonical_url": "https://x/y",
+              "capture_status": "complete"},
         path=tmp_path / "10_sources" / "n.md", note_type="source", body="b")
     vi = SimpleNamespace(by_id={"src_x": existing}, notes=[existing])
     record = {"id": "src_x", "capture_status": "complete", "canonical_url": "https://x/y",
               "content_hash": "sha256:SAME", "captured_at": "2026-07-15T00:00:00+08:00",
-              "text": "x", "platform": "web", "title": "t"}
+              "text": "x", "platform": "web", "title": "t", "capture_method": "direct"}
     plan = writer.plan_source_filing(SimpleNamespace(vault=tmp_path), vi, record)
     assert plan["action"] == "noop_duplicate"
 

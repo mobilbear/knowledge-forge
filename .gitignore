@@ -11,6 +11,7 @@ vendor/
 kf.env
 .obsidian/
 .trash/
+.kf-recovery/
 .stfolder/
 *.sqlite*
 runtime/

@@ -43,3 +43,5 @@ The engine saves the original, refreshes generated pages, and checks the links b
 ## Version control
 
 This checkout holds the code, schemas, prompts, shared skill, design and synthetic fixtures. Keep your active vault and runtime state in separate directories. Start future changes from this Git checkout and use the checkout’s launcher to avoid running an older installed copy.
+
+Run `bin/check` after installing the development dependencies. It validates the capture and editorial workflows in isolated vaults and prints the location of the retained test artifacts.

@@ -17,7 +17,7 @@ from typing import Optional
 from ..config import KFConfig
 from ..discovery import VaultIndex, rel
 from ..enrichment import harness
-from ..vault import transactions as txn
+from ..vault import library_writes
 from ..vault.writer import verify_vault
 from ..index import search
 
@@ -119,9 +119,10 @@ def build_briefing(cfg: KFConfig, kind: str = "daily",
 
 def commit_briefing(cfg: KFConfig, built: dict) -> dict:
     verify_vault(cfg)
-    t = txn.new_transaction(cfg.state_home, cfg.vault, meta={"action": "briefing"})
-    t.stage_write(built["rel"], built["content"])
-    with txn.VaultLock(cfg.lock_path):
+    with library_writes.library_lock(cfg.state_home / "library.lock"):
+        library_writes.recover(cfg, lambda: search.refresh_after_commit(cfg))
+        t = library_writes.new_transaction(cfg, {"action": "library.briefing"})
+        t.stage_write(built["rel"], built["content"])
         t.commit(after_commit=lambda: search.refresh_after_commit(cfg))
     return {"note": built["rel"]}
 
