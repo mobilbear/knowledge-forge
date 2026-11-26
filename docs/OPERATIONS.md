@@ -1,0 +1,42 @@
+# Operate Knowledge Forge
+
+## Choose one vault and writer
+
+Set `KF_VAULT` to the root directory opened by Obsidian. Set `KF_STATE_HOME`, `KF_CACHE_HOME`, and `KF_BACKUP_ROOT` outside the vault. Keep the env file outside the repository and the synced folder. See [the example configuration](../kf.env.example). The checkout launcher uses its own source code and defaults to the offline model profile. That profile can still fetch a URL supplied for capture. It skips calls to a model API and leaves interpretation for an agent.
+
+Use `bin/kf --json library init` to stamp a selected vault, persist the starting taxonomy if it is absent, and generate HOME, Canvas and Bases. For an existing vault, take and verify a backup before first initialization. Re-run `bin/kf --json library rebuild` after manual taxonomy or navigation edits. Use `bin/kf --json status` to check index freshness and incomplete transactions.
+
+## Capture and review
+
+| Job | Command using the configured launcher |
+| --- | --- |
+| Save an article | `kf --json capture url "https://example.org/article"` |
+| Save an article and check its public references | `kf --json capture url "https://example.org/article" --follow-references` |
+| Submit a forwarded link for processing | `kf --json capture submit "<forwarded-message>"` |
+| Process that receipt | `kf --json capture drain <receipt>` |
+| Review a receipt | `kf --json status <receipt>` |
+| Import synced browser clips | `kf --json library import-clips` |
+| File a checked source guide | `kf --json library reading-guides <draft.json>` |
+| Check references in an archived article | `kf --json library resources <source-id-or-path>` |
+| File a deep-reading lesson | `kf --json library lesson <source-id-or-path> <draft.md>` |
+| Update today's personal edition | `kf --json library edition <source-id-or-path> <draft.md>` |
+| Find past evidence | `kf --json search "topic"` |
+
+Import the [Web Clipper template](../examples/obsidian-web-clipper.json) in Obsidian Web Clipper. Use the configured vault in the extension. Browser clips enter `00_inbox/Web Clips`. Set `clip_scope` to `Full article` only after checking the complete body.
+
+Optional format support depends on the machine. The Python `capture` extra includes article extraction and `yt-dlp`. Text PDFs use `pdfinfo` and `pdftotext`. Image OCR uses Tesseract with the appropriate language packs or a configured OCR adapter. Short local speech previews use FFmpeg, the `speech` extra, and a compatible model file selected with `KF_WHISPER_MODEL`. Videos without usable captions, access-controlled pages, and scanned documents may need user-supplied material.
+
+## Route Ohayo and Munger through the same checkout
+
+1. Configure one launcher with the target vault and state paths. Give both agents that same absolute launcher path and confirm the runtime is using it. A bare `kf` can resolve to an older install.
+2. Review [the shared skill](../skills/knowledge-forge/SKILL.md) and its [editorial draft formats](../skills/knowledge-forge/references/editorial-workflow.md). Install that skill using each agent runtime's documented skill mechanism after obtaining approval for production changes. Keep the prior skill copy until the new route has been verified.
+3. Save a public article through each agent. Confirm the receipt, exact source path, checked guide, resource review where eligible, and current edition link. Re-submit one of the links to confirm that it opens the existing source.
+4. Open the synced vault on the reading device. Check the briefing, a Canvas branch, and an evidence jump to an original PDF or transcript.
+
+Keep source text, transcripts, and linked pages as evidence. The agent writes its interpretation in a local draft and uses the CLI to file it. An incomplete receipt should describe the missing input. Use the editable personal edition for the narrative. The engine regenerates Current Brief from saved state after capture.
+
+## Sync and updates
+
+Sync Markdown, Canvas, Bases and attachments through your chosen file sync, such as Syncthing or VaultSync. Keep the writer's journals, queues, logs, locks and index on the writer machine. A search index can be rebuilt. Pending jobs and transaction records need their own backup if they must survive a move.
+
+Start code changes from the tracked Git branch. Check the current worktree, pull with `git pull --ff-only` when a remote is configured, use the demo or a separate validation vault, and commit the verified change. Review changed skill files before deploying them to agents.

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Taxonomy registry",
+  "type": "object",
+  "required": ["schema_version", "nodes"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category_id", "title", "level", "status"],
+        "properties": {
+          "category_id": {"type": "string", "pattern": "^cat_[a-z0-9_]+$"},
+          "title": {"type": "string"},
+          "parent_id": {"type": ["string", "null"], "pattern": "^cat_[a-z0-9_]+$"},
+          "level": {"type": "integer", "minimum": 1, "maximum": 4},
+          "status": {"enum": ["active", "provisional", "merged", "deprecated", "pending_approval"]},
+          "aliases": {"type": "array", "items": {"type": "string"}},
+          "description": {"type": "string"},
+          "positive_examples": {"type": "array", "items": {"type": "string"}},
+          "negative_examples": {"type": "array", "items": {"type": "string"}},
+          "merged_into": {"type": ["string", "null"]},
+          "created_by": {"type": "string"},
+          "created_at": {"type": "string"},
+          "review_status": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

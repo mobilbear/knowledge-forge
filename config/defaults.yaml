@@ -1,0 +1,7 @@
+# General defaults.
+home:
+  pinned_domains: []        # category_ids to pin on HOME; empty = all L1
+maps:
+  max_atlas_nodes: 40
+logs:
+  keep_days: 30

@@ -1,0 +1,33 @@
+# Model profiles for Knowledge Forge v1.5.1.
+# Correctness never depends on the model: every profile can fail to a queue.
+profiles:
+  high:
+    provider: openai_compat            # or wire an Anthropic-compatible endpoint
+    base_url_env: KF_MINIMAX_BASE_URL  # reuse whichever strong endpoint is configured
+    api_key_env: KF_HIGH_API_KEY
+    model: ""                          # set on the machine, e.g. a frontier model
+    max_context_chars: 24000
+  standard:
+    provider: openai_compat
+    base_url_env: KF_MINIMAX_BASE_URL
+    api_key_env: KF_MINIMAX_API_KEY
+    model: MiniMax-Text-01
+    max_context_chars: 12000
+  low:
+    provider: openai_compat
+    base_url_env: KF_MINIMAX_BASE_URL
+    api_key_env: KF_MINIMAX_API_KEY
+    model: MiniMax-Text-01
+    max_context_chars: 6000
+  offline:
+    provider: offline
+
+# Which capability each task needs, and its fallback when the model is
+# unavailable or returns invalid output twice.
+tasks:
+  capture:            {model: none,     fallback: n/a (deterministic)}
+  quality_review:     {model: optional-low, fallback: rule-based verdict stands}
+  summarize:          {model: low,      fallback: extractive TL;DR + re-enrichment queue}
+  classify:           {model: low,      fallback: pending_classification queue}
+  weekly_synthesis:   {model: standard, fallback: deterministic compilation}
+  taxonomy_restructure: {model: high-or-human, fallback: proposal only, never auto-apply}

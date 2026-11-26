@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "Knowledge Forge Web Clip",
+  "behavior": "create",
+  "noteNameFormat": "{{title|safe_name}}",
+  "path": "00_inbox/Web Clips",
+  "noteContentFormat": "# {{title}}\n\n{{content}}",
+  "properties": [
+    { "name": "note_type", "value": "web_clip", "type": "text" },
+    { "name": "source_url", "value": "{{url}}", "type": "text" },
+    { "name": "captured_at", "value": "{{date|date:\"YYYY-MM-DD\"}}", "type": "date" },
+    { "name": "clip_scope", "value": "Unverified", "type": "text" }
+  ],
+  "triggers": []
+}

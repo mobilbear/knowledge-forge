@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+checkout="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+export KF_HOME="$checkout"
+export PYTHONPATH="$checkout/src${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONDONTWRITEBYTECODE=1
+exec "${KF_PYTHON:-python3}" -B -m knowledge_forge.cli.main --profile offline "$@"

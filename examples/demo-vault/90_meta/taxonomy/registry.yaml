@@ -1,0 +1,13 @@
+schema_version: 1.5.1
+nodes:
+- category_id: cat_community_libraries
+  title: Community libraries
+  level: 1
+  status: active
+  description: Operations of the fictional Juniper Tool Library.
+- category_id: cat_service_hours
+  parent_id: cat_community_libraries
+  title: Service hours
+  level: 2
+  status: active
+  description: Opening-hours notices, desk trials, and decisions about access.

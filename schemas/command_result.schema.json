@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Common CLI JSON envelope",
+  "type": "object",
+  "required": ["schema_version", "command", "run_id", "status", "result",
+               "warnings", "errors", "needs_user_action", "user_message_zh"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "command": {"type": "string"},
+    "run_id": {"type": "string", "pattern": "^run_[0-9a-f]{16}$"},
+    "status": {"enum": ["completed", "queued", "needs_review", "failed", "noop"]},
+    "result": {"type": ["object", "array", "null"]},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "errors": {"type": "array", "items": {"type": "string"}},
+    "needs_user_action": {"type": "boolean"},
+    "user_message_zh": {"type": "string"}
+  }
+}

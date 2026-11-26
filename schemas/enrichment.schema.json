@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Model enrichment result (summary + tag proposals)",
+  "type": "object",
+  "required": [
+    "tldr",
+    "description",
+    "tag_proposals",
+    "abstained"
+  ],
+  "properties": {
+    "tldr": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "tag_proposals": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "maxLength": 60
+      }
+    },
+    "key_entities": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "string",
+        "maxLength": 120
+      }
+    },
+    "abstained": {
+      "type": "boolean"
+    },
+    "abstain_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "key_points": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": [
+          "point",
+          "quote",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "point": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 350
+          },
+          "quote": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 240
+          },
+          "evidence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          }
+        }
+      }
+    },
+    "why_it_matters": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 550
+    }
+  },
+  "additionalProperties": false
+}

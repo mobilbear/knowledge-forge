@@ -1,0 +1,6 @@
+# Thresholds for taxonomy governance (configurable, not buried in prompts).
+l3_min_sources: 3          # sources needed before an L3 topic may be created
+l3_min_occasions: 2        # ...collected on at least this many distinct days
+l2_min_subclusters: 3      # L3 subclusters before gardener proposes an L2 restructure
+candidate_pool_size: 6     # candidates retrieved for the classifier
+min_classification_confidence: 0.55

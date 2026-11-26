@@ -1,0 +1,10 @@
+# Adapter configuration. Capability statuses live in code
+# (knowledge_forge.capture.adapters.CAPABILITY) and are exported to
+# docs/CAPABILITY_MATRIX.md — this file only tunes behavior.
+quality:
+  min_usable_chars: 200
+  min_complete_chars: 600
+cascade_timeouts:
+  direct: 45
+  jina: 60
+  browser: 45

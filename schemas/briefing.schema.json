@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Model-written briefing narrative sections",
+  "type": "object",
+  "required": ["item_notes", "top_ideas", "abstained"],
+  "properties": {
+    "item_notes": {"type": "array", "maxItems": 20,
+      "items": {"type": "object", "required": ["source_id", "note"],
+        "properties": {"source_id": {"type": "string"}, "note": {"type": "string", "maxLength": 800}},
+        "additionalProperties": false}},
+    "top_ideas": {"type": "array", "maxItems": 3, "items": {"type": "string", "maxLength": 300}},
+    "followups": {"type": "array", "maxItems": 5, "items": {"type": "string", "maxLength": 200}},
+    "connections": {"type": "array", "maxItems": 8, "items": {"type": "string", "maxLength": 300}},
+    "abstained": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}
